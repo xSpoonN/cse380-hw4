@@ -15,12 +15,56 @@ import GraphUtils from "../../Wolfie2D/Utils/GraphUtils";
  * - Peter
  */
 export default class AstarStrategy extends NavPathStrat {
-
+    public getNeighbors(nodeIndex: number): number[] {
+        const neighbors = [];
+        let edge = this.mesh.graph.edges[nodeIndex];
+        while (edge) {
+            neighbors.push(edge.y);
+            edge = edge.next;
+        }
+        return neighbors;
+    }
     /**
      * @see NavPathStrat.buildPath()
      */
     public buildPath(to: Vec2, from: Vec2): NavigationPath {
-        return new NavigationPath(new Stack());
+        console.log("Creating path using A*");
+        let openSet = [];
+        let closedSet = new Map();
+        let scores = new Map(); // Map of nodes to their g and h scores
+        let sfrom = this.mesh.graph.getNodePosition(this.mesh.graph.snap(from)); let sto = this.mesh.graph.getNodePosition(this.mesh.graph.snap(to));
+        openSet.push({node: sfrom, f: 0 + sfrom.distanceTo(sto)}); /* console.log(`From: ${sfrom}, To: ${sto}`); */
+
+        function reconstructPath(node: Vec2, scores, graph) { /* Reconstruct path using parent pointers */
+            let stack = new Stack<Vec2>(1000); /* console.log("Reconstructing path..."); */
+            while (node != null) {
+                stack.push(node); /* console.log(`Adding ${node} to path`); */
+                try { node = scores.get(graph.snap(node)).parent; } catch { break; } 
+            }
+            return stack;
+        }
+
+        while (openSet.length > 0) {
+            openSet.sort((a, b) => a.f - b.f); /* Get the node with the lowest f score from the open set */
+            let currentNode: Vec2 = openSet[0].node; let currentFScore: number = openSet[0].f; openSet.shift();
+
+            if (currentNode == sto) return new NavigationPath(reconstructPath(currentNode, scores, this.mesh.graph)); /* Reached the end node */
+            closedSet.set(currentNode.toString(), true); /* Add the current node to the closed set */
+            for (const neighbor of this.getNeighbors(this.mesh.graph.snap(currentNode))){
+                const nb = this.mesh.graph.getNodePosition(neighbor);
+                if (closedSet.has(nb.toString())) continue;
+                /* console.log(`Evaluating neighbor of ${currentNode}: ${nb}`); */
+                let tentativeGScore = currentFScore - currentNode.distanceTo(sto) + currentNode.distanceTo(nb);
+
+                /* Neighbor is not in the open set, add it and calculate its h score */
+                if (!openSet.some((element) => element.node.toString() === nb.toString())) openSet.push({node: nb, f: tentativeGScore + nb.distanceTo(sto)});
+                else if (tentativeGScore >= scores.get(neighbor).g) continue;
+
+                /* Update the neighbor's g score and set its parent to the current node */
+                scores.set(neighbor, {g: tentativeGScore, h: nb.distanceTo(sto), parent: currentNode});
+                openSet[openSet.length-1].f = tentativeGScore + scores.get(neighbor).h; /* Update the neighbor's f score in the open set */
+            }
+        }
+        /* console.log("No path found!"); */ return new NavigationPath(new Stack());
     }
-    
 }

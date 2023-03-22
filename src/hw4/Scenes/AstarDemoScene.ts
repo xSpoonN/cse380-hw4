@@ -45,7 +45,7 @@ export default class AStarDemoScene extends Scene {
         navmesh.registerStrategy("astar", new AstarStrategy(navmesh));
         
         // TODO Set the navigation strategy to be A*
-        navmesh.setStrategy("direct");
+        navmesh.setStrategy("astar");
 
         // Create a dummy NPC
         this.npc = this.add.animatedSprite(NPCActor, "BlueEnemy", "primary")

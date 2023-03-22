@@ -109,8 +109,8 @@ export default class PositionGraph extends Graph implements DebugRenderable {
     }
 
 	debugRender = (): void => {
-		// for(let point of this.positions){
-		// 	ctx.fillRect((point.x - origin.x - 4)*zoom, (point.y - origin.y - 4)*zoom, 8, 8);
-		// }
+		/* for(let point of this.positions){
+			ctx.fillRect((point.x - origin.x - 4)*zoom, (point.y - origin.y - 4)*zoom, 8, 8);
+		} */
 	}
 }
