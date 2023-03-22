@@ -28,40 +28,37 @@ export default class AstarStrategy extends NavPathStrat {
      * @see NavPathStrat.buildPath()
      */
     public buildPath(to: Vec2, from: Vec2): NavigationPath {
-        console.log("Creating path using A*");
-        let openSet = [];
-        let closedSet = new Map();
-        let scores = new Map(); // Map of nodes to their g and h scores
-        let sfrom = this.mesh.graph.getNodePosition(this.mesh.graph.snap(from)); let sto = this.mesh.graph.getNodePosition(this.mesh.graph.snap(to));
-        openSet.push({node: sfrom, f: 0 + sfrom.distanceTo(sto)}); /* console.log(`From: ${sfrom}, To: ${sto}`); */
+        /* console.log("Creating path using A*"); */
+        from = this.mesh.graph.getNodePosition(this.mesh.graph.snap(from)); to = this.mesh.graph.getNodePosition(this.mesh.graph.snap(to));
+        let openSet = [{node: from, f: 0 + from.distanceTo(to)}], closedSet = new Map(), scores = new Map();
 
-        function reconstructPath(node: Vec2, scores, graph) { /* Reconstruct path using parent pointers */
+        function reconstructPath(node: Vec2, scores: Map<Vec2, {g: number, h: number, parent: Vec2}>, graph): Stack<Vec2> { /* Reconstruct path using parents */
             let stack = new Stack<Vec2>(1000); /* console.log("Reconstructing path..."); */
-            while (node != null) {
+            while (node) {
                 stack.push(node); /* console.log(`Adding ${node} to path`); */
-                try { node = scores.get(graph.snap(node)).parent; } catch { break; } 
+                node = scores.get(graph.snap(node))?.parent;
             }
             return stack;
         }
 
         while (openSet.length > 0) {
             openSet.sort((a, b) => a.f - b.f); /* Get the node with the lowest f score from the open set */
-            let currentNode: Vec2 = openSet[0].node; let currentFScore: number = openSet[0].f; openSet.shift();
+            const {node: currentNode, f: currentFScore} = openSet.shift();
 
-            if (currentNode == sto) return new NavigationPath(reconstructPath(currentNode, scores, this.mesh.graph)); /* Reached the end node */
+            if (currentNode == to) return new NavigationPath(reconstructPath(currentNode, scores, this.mesh.graph)); /* Reached the end node */
             closedSet.set(currentNode.toString(), true); /* Add the current node to the closed set */
             for (const neighbor of this.getNeighbors(this.mesh.graph.snap(currentNode))){
                 const nb = this.mesh.graph.getNodePosition(neighbor);
                 if (closedSet.has(nb.toString())) continue;
                 /* console.log(`Evaluating neighbor of ${currentNode}: ${nb}`); */
-                let tentativeGScore = currentFScore - currentNode.distanceTo(sto) + currentNode.distanceTo(nb);
+                let tentativeGScore = currentFScore - currentNode.distanceTo(to) + currentNode.distanceTo(nb);
 
                 /* Neighbor is not in the open set, add it and calculate its h score */
-                if (!openSet.some((element) => element.node.toString() === nb.toString())) openSet.push({node: nb, f: tentativeGScore + nb.distanceTo(sto)});
-                else if (tentativeGScore >= scores.get(neighbor).g) continue;
+                if (!openSet.some(({ node }) => node.toString() === nb.toString())) openSet.push({ node: nb, f: tentativeGScore + nb.distanceTo(to) });
+                else if (tentativeGScore >= scores.get(neighbor).g) continue; /* This is not a better path */
 
                 /* Update the neighbor's g score and set its parent to the current node */
-                scores.set(neighbor, {g: tentativeGScore, h: nb.distanceTo(sto), parent: currentNode});
+                scores.set(neighbor, {g: tentativeGScore, h: nb.distanceTo(to), parent: currentNode});
                 openSet[openSet.length-1].f = tentativeGScore + scores.get(neighbor).h; /* Update the neighbor's f score in the open set */
             }
         }
