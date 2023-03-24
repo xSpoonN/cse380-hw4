@@ -22,7 +22,13 @@ export default class UseHealthpack extends NPCAction {
     }
 
     public performAction(target: Battler): void {
-
+        console.log("Using Healthpack");
+        const hp = this.actor.inventory.find((item) => item instanceof Healthpack);
+        if (hp) {
+            target.health += (hp as Healthpack).health;
+            this.actor.inventory.remove(hp.id);
+        }
+        this.finished();
     }
 
 }
