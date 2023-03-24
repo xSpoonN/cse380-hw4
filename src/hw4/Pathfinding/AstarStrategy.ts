@@ -5,7 +5,7 @@ import NavPathStrat from "../../Wolfie2D/Pathfinding/Strategies/NavigationStrate
 import GraphUtils from "../../Wolfie2D/Utils/GraphUtils";
 
 class PriorityQueue<T> {
-  private heap: T[];
+  public heap: T[];
   private compareFn: (a: T, b: T) => number;
   constructor(compareFn: (a: T, b: T) => number) {
     this.heap = []; this.compareFn = compareFn;
@@ -74,14 +74,12 @@ export default class AstarStrategy extends NavPathStrat {
         /* console.log(`Neighbors of ${graph.getNodePosition(nodeIndex)}: ${neighbors.map(nb => graph.getNodePosition(nb))}`); */
         return neighbors;
     }
-    /**
-     * @see NavPathStrat.buildPath()
-     */
     public buildPath(to: Vec2, from: Vec2): NavigationPath {
-        /* console.log("Creating path using A*"); */
         /* console.log(`From: ${from}, To: ${to}`); */
         from = this.mesh.graph.getNodePosition(this.mesh.graph.snap(from)); to = this.mesh.graph.getNodePosition(this.mesh.graph.snap(to));
-        let openSet = [{node: from, g: 0}], closedSet = new Map(), scores = new Map();
+        let openSet = new PriorityQueue<{node: Vec2, g: number}>((a, b) => (a.g+a.node.distanceTo(to)) - (b.g+b.node.distanceTo(to)));
+        let closedSet = new Map(), scores = new Map();
+        openSet.enqueue({node: from, g: 0});
 
         function reconstructPath(node: Vec2, scores: Map<Vec2, {g: number, parent: Vec2}>, graph): Stack<Vec2> {
             let stack = new Stack<Vec2>(1000); /* console.log("Reconstructing path..."); */
@@ -92,13 +90,8 @@ export default class AstarStrategy extends NavPathStrat {
             return stack;
         }
 
-        while (openSet.length) {
-            /* const {node: tempNode, g: currentGScore} = openSet.reduce((a, b) => (a.g+a.node.distanceTo(to)) <= (b.g+b.node.distanceTo(to)) ? a : b, openSet[0]);
-            const currentNode: Vec2 = new Vec2(tempNode.x, tempNode.y);
-            openSet.splice(openSet.findIndex(({node}) => node.x === currentNode.x && node.y === currentNode.y), 1); */
-            openSet.sort((a, b) => (a.g+a.node.distanceTo(to)) - (b.g+b.node.distanceTo(to))); /* Sort the open set by f score */
-            const {node: currentNode, g: currentGScore} = openSet.shift();
-
+        while (openSet.size) {
+            const {node: currentNode, g:currentGScore} = openSet.dequeue(); /* Get the minimum node */
             if (currentNode.x == to.x && currentNode.y == to.y) return new NavigationPath(reconstructPath(currentNode, scores, this.mesh.graph)); /* Reached the end node */
             closedSet.set(currentNode.toString(), true); /* Add the current node to the closed set */
             for (const neighbor of this.getNeighbors(this.mesh.graph.snap(currentNode))){
@@ -107,12 +100,9 @@ export default class AstarStrategy extends NavPathStrat {
                 let tentativeGScore = currentGScore + (currentNode.distanceTo(nb) * ((currentNode.x == nb.x || currentNode.y == nb.y) ? 1 : 1.414));
 
                 /* Neighbor is not in the open set, add it and calculate its h score */
-                if (!openSet.some(({ node }) => node.toString() === nb.toString())) openSet.push({ node: nb, g: tentativeGScore });
+                if (!openSet.heap.some(({ node }) => node.toString() === nb.toString())) openSet.enqueue({ node: nb, g: tentativeGScore });
                 else if (tentativeGScore >= scores.get(neighbor).g) continue; /* This is not a better path */
-
-                /* Update the neighbor's g score and set its parent to the current node */
-                scores.set(neighbor, {g: tentativeGScore, parent: currentNode});
-                /* openSet[openSet.length-1].g = tentativeGScore; */ /* Update the neighbor's f score in the open set */
+                scores.set(neighbor, {g: tentativeGScore, parent: currentNode}); /* Update the neighbor's g score and set its parent to the current node */
             }
         }
         console.log("No path found!"); return new NavigationPath(new Stack());

@@ -50,7 +50,7 @@ export default class HealerBehavior extends NPCBehavior  {
         // TODO configure the rest of the healer actions
         let healAlly = new UseHealthpack(this, this.owner);
         healAlly.targets = scene.getBattlers();
-        healAlly.targetFinder = new BasicFinder<Battler>(ClosestPositioned(this.owner), BattlerActiveFilter(), BattlerGroupFilter([owner.battleGroup]), BattlerHealthFilter(0, 0.5));
+        healAlly.targetFinder = new BasicFinder<Battler>(ClosestPositioned(this.owner), BattlerActiveFilter(), BattlerGroupFilter([owner.battleGroup]), BattlerHealthFilter(0, this.owner.maxHealth/2));
         healAlly.addPrecondition(HealerStatuses.HAS_HPACK);
         healAlly.addPrecondition(HealerStatuses.ALLY_EXISTS);
         healAlly.addEffect(HealerStatuses.GOAL);
@@ -59,10 +59,10 @@ export default class HealerBehavior extends NPCBehavior  {
 
         let pickupHpack = new PickupItem(this, this.owner);
         pickupHpack.targets = scene.getHealthpacks();
-        pickupHpack.targetFinder = new BasicFinder<Item>(null, ItemFilter(Healthpack), VisibleItemFilter());
+        pickupHpack.targetFinder = new BasicFinder<Item>(ClosestPositioned(this.owner), ItemFilter(Healthpack), VisibleItemFilter());
         pickupHpack.addPrecondition(HealerStatuses.HPACK_EXISTS);
         pickupHpack.addEffect(HealerStatuses.HAS_HPACK);
-        pickupHpack.cost = 10;
+        pickupHpack.cost = 1;
         this.addState(HealerActions.PICKUP_HPACK, pickupHpack);
 
         // Idle action
